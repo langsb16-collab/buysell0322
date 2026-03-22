@@ -1,0 +1,106 @@
+{
+  "entities": {
+    "Product": {
+      "title": "Product",
+      "description": "A product in the PIM system",
+      "type": "object",
+      "properties": {
+        "sku": { "type": "string" },
+        "name": { "type": "string" },
+        "price": { "type": "number" },
+        "stock": { "type": "number" },
+        "category": { "type": "string" },
+        "marketplace_ids": { "type": "array", "items": { "type": "string" } },
+        "moq": { "type": "number" },
+        "wholesale_price": { "type": "number" },
+        "vip_price": { "type": "number" }
+      },
+      "required": ["sku", "name", "price", "stock"]
+    },
+    "Order": {
+      "title": "Order",
+      "description": "A customer order",
+      "type": "object",
+      "properties": {
+        "marketplace": { "type": "string", "enum": ["amazon", "shopee", "coupang", "direct"] },
+        "status": { "type": "string", "enum": ["paid", "shipped", "cancelled", "pending"] },
+        "customer_name": { "type": "string" },
+        "customer_address": { "type": "string" },
+        "total_amount": { "type": "number" },
+        "created_at": { "type": "string", "format": "date-time" },
+        "items": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "product_id": { "type": "string" },
+              "qty": { "type": "number" },
+              "price": { "type": "number" }
+            }
+          }
+        }
+      },
+      "required": ["marketplace", "status", "total_amount", "created_at"]
+    },
+    "User": {
+      "title": "User",
+      "description": "User profile with role",
+      "type": "object",
+      "properties": {
+        "email": { "type": "string" },
+        "role": { "type": "string", "enum": ["admin", "wholesale", "vip", "normal"] },
+        "business_license": { "type": "string" },
+        "is_approved": { "type": "boolean" }
+      },
+      "required": ["email", "role"]
+    },
+    "Trend": {
+      "title": "Trend",
+      "description": "Market trend data",
+      "type": "object",
+      "properties": {
+        "keyword": { "type": "string" },
+        "growth": { "type": "number" },
+        "demand": { "type": "number" },
+        "score": { "type": "number" },
+        "last_updated": { "type": "string", "format": "date-time" }
+      },
+      "required": ["keyword", "score"]
+    },
+    "Campaign": {
+      "title": "Campaign",
+      "description": "Ad campaign data",
+      "type": "object",
+      "properties": {
+        "product_id": { "type": "string" },
+        "marketplace": { "type": "string" },
+        "budget": { "type": "number" },
+        "status": { "type": "string", "enum": ["active", "paused", "ended"] },
+        "roas": { "type": "number" }
+      },
+      "required": ["product_id", "marketplace", "status"]
+    }
+  },
+  "firestore": {
+    "/products/{productId}": {
+      "schema": "Product",
+      "description": "Products collection"
+    },
+    "/orders/{orderId}": {
+      "schema": "Order",
+      "description": "Orders collection"
+    },
+    "/users/{userId}": {
+      "schema": "User",
+      "description": "Users collection"
+    },
+    "/trends/{trendId}": {
+      "schema": "Trend",
+      "description": "Trends collection"
+    },
+    "/campaigns/{campaignId}": {
+      "schema": "Campaign",
+      "description": "Campaigns collection"
+    }
+  }
+}

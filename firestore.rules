@@ -1,0 +1,109 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    // ===============================================================
+    // Assumed Data Model
+    // ===============================================================
+    //
+    // Collection: users
+    // Fields:
+    //   - email: string (required)
+    //   - role: string (required, ['admin', 'wholesale', 'vip', 'normal'])
+    //   - business_license: string (optional)
+    //   - is_approved: bool (optional)
+    //
+    // Collection: products
+    // Fields:
+    //   - sku: string (required)
+    //   - name: string (required)
+    //   - price: number (required)
+    //   - stock: number (required)
+    //   - category: string (optional)
+    //   - marketplace_ids: list (optional)
+    //   - moq: number (optional)
+    //   - wholesale_price: number (optional)
+    //   - vip_price: number (optional)
+    //
+    // Collection: orders
+    // Fields:
+    //   - marketplace: string (required, ['amazon', 'shopee', 'coupang', 'direct'])
+    //   - status: string (required, ['paid', 'shipped', 'cancelled', 'pending'])
+    //   - customer_name: string (optional)
+    //   - total_amount: number (required)
+    //   - created_at: timestamp (required)
+    //   - items: list (required)
+    //
+    // ===============================================================
+
+    // ===============================================================
+    // Helper Functions
+    // ===============================================================
+    function isAuthenticated() {
+      return request.auth != null;
+    }
+
+    function isOwner(userId) {
+      return isAuthenticated() && request.auth.uid == userId;
+    }
+
+    function isAdmin() {
+      return isAuthenticated() &&
+        (get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'admin' ||
+          (request.auth.token.email == "langsb16@gmail.com" && request.auth.token.email_verified == true));
+    }
+
+    function isValidUser(data) {
+      return data.keys().hasAll(['email', 'role']) &&
+             data.email is string &&
+             data.role in ['admin', 'wholesale', 'vip', 'normal'];
+    }
+
+    function isValidProduct(data) {
+      return data.keys().hasAll(['sku', 'name', 'price', 'stock']) &&
+             data.sku is string && data.sku.size() < 100 &&
+             data.name is string && data.name.size() < 200 &&
+             data.price is number && data.price >= 0 &&
+             data.stock is number && data.stock >= 0;
+    }
+
+    function isValidOrder(data) {
+      return data.keys().hasAll(['marketplace', 'status', 'total_amount', 'created_at', 'items']) &&
+             data.marketplace in ['amazon', 'shopee', 'coupang', 'direct'] &&
+             data.status in ['paid', 'shipped', 'cancelled', 'pending'] &&
+             data.total_amount is number &&
+             data.items is list;
+    }
+
+    // ===============================================================
+    // Rules
+    // ===============================================================
+
+    match /users/{userId} {
+      allow read: if isOwner(userId) || isAdmin();
+      allow create: if isAuthenticated() && isValidUser(request.resource.data) && (isOwner(userId) || isAdmin());
+      allow update: if isAuthenticated() && isValidUser(request.resource.data) && (isAdmin() || (isOwner(userId) && request.resource.data.role == resource.data.role));
+    }
+
+    match /products/{productId} {
+      allow read: if isAuthenticated();
+      allow write: if isAdmin();
+    }
+
+    match /orders/{orderId} {
+      allow read: if isAdmin() || (isAuthenticated() && resource.data.customer_uid == request.auth.uid);
+      allow create: if isAuthenticated() && isValidOrder(request.resource.data);
+      allow update: if isAdmin();
+      allow delete: if isAdmin();
+    }
+
+    match /trends/{trendId} {
+      allow read: if isAuthenticated();
+      allow write: if isAdmin();
+    }
+
+    match /campaigns/{campaignId} {
+      allow read: if isAuthenticated();
+      allow write: if isAdmin();
+    }
+  }
+}
